@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% block title %}Project gallery{% endblock %}
+{% block content %}
+  <h2>Project gallery</h2>
+  <p class="muted">{{ projects|length }} submitted project{{ projects|length|pluralize }}. Public, no login needed.</p>
+
+  <form class="search" method="get" action="/projects">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search title or summary">
+    <select name="track">
+      <option value="">All tracks</option>
+      {% for t in tracks %}
+        <option value="{{ t.external_id }}" {% if t.external_id == track_id %}selected{% endif %}>{{ t.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="go" type="submit">Search</button>
+  </form>
+
+  {% for project in projects %}
+    <div class="card">
+      <h3>{{ project.title }}</h3>
+      <p class="muted">{{ project.summary }}</p>
+      <span class="chip">{{ project.track.name|default:"No track" }}</span>
+      <span class="chip">{{ project.team.name }}</span>
+      {% if project.is_duplicate %}<span class="flag">duplicate submission</span>{% endif %}
+    </div>
+  {% empty %}
+    <p>No projects match.</p>
+  {% endfor %}
+{% endblock %}

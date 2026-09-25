@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Django / runtime data
+*.sqlite3
+db.sqlite3
+src/db.sqlite3
+data/
+src/staticfiles/
+staticfiles/
+
+# local scratch
+*.log
+.DS_Store

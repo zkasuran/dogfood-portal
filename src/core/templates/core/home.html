@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+{% block title %}DOGFOOD portal{% endblock %}
+{% block content %}
+  <h2>Build the platform that will judge you</h2>
+  <p>An open source, self hostable hackathon submission and judging portal.
+     It runs offline in one container, seeded with real fixture data.</p>
+  <div class="card">
+    <h3>Start here</h3>
+    <p><a href="/projects">Browse the public gallery</a></p>
+    <p><a href="/api/docs">Read the API (OpenAPI)</a></p>
+    <p><a href="/admin/">Open the organizer console</a></p>
+    <p class="muted">Health check: <a href="/health">/health</a></p>
+  </div>
+{% endblock %}
