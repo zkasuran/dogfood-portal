@@ -267,3 +267,36 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} {self.target}"
+
+
+class Bundle(models.Model):
+    """A published, signed results bundle.
+
+    The payload holds everything needed to recompute the ranking: the raw scores
+    with duplicates already merged, the rubric weights, the method and its params,
+    the code commit and the ranking itself. We store the sha256 digest, the Ed25519
+    signature and the public key beside it, so a result is reproducible and checkable
+    after the fact with verify.py, without trusting the host. See JUDGING.md.
+    """
+
+    payload = models.JSONField()
+    digest = models.CharField(max_length=64)
+    signature = models.CharField(max_length=128)
+    public_key = models.CharField(max_length=64)
+    code_commit = models.CharField(max_length=64, default="unknown")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def as_bundle(self):
+        """The wire form verify.py checks: payload, digest, public key, signature."""
+        return {
+            "payload": self.payload,
+            "digest": self.digest,
+            "public_key": self.public_key,
+            "signature": self.signature,
+        }
+
+    def __str__(self):
+        return f"bundle {self.digest[:12]} @ {self.code_commit[:8]}"
