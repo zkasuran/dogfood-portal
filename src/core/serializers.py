@@ -1,4 +1,5 @@
 """Serializers for the public and judge-facing API."""
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Project, Score
@@ -38,6 +39,7 @@ class JudgeScoreSerializer(serializers.ModelSerializer):
         model = Score
         fields = ["project", "project_title", "criteria", "comment", "created_at"]
 
+    @extend_schema_field(serializers.DictField(child=serializers.IntegerField()))
     def get_criteria(self, score):
         return {v.criterion.key: v.value for v in score.values.all()}
 

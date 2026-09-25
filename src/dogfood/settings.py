@@ -125,7 +125,22 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "DOGFOOD judging portal API",
-    "DESCRIPTION": "Public, backend-enforced hackathon submission and judging API.",
+    "DESCRIPTION": (
+        "Public, backend-enforced hackathon submission and judging API. Role "
+        "isolation is enforced in the backend, so a curl as the wrong role is "
+        "refused with 401 or 403 before any view code runs. Results are "
+        "published as an Ed25519-signed, content-addressed bundle that anyone "
+        "can recompute and verify offline."
+    ),
     "VERSION": "1.0.0",
+    "LICENSE": {"name": "MIT", "url": "https://opensource.org/license/mit"},
     "SERVE_INCLUDE_SCHEMA": False,
+    "PREPROCESSING_HOOKS": ["core.schema.dedupe_trailing_slash"],
+    "TAGS": [
+        {"name": "Gallery", "description": "Public project gallery and submission."},
+        {"name": "Judging", "description": "Judge-only scores with per-judge isolation."},
+        {"name": "Results", "description": "Signed, reproducible results bundles."},
+        {"name": "Verification", "description": "The public key that signs every bundle."},
+        {"name": "Export", "description": "Organizer-only weighted CSV export."},
+    ],
 }

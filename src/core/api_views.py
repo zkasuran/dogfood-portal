@@ -10,7 +10,15 @@ import csv
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils import timezone
-from rest_framework import status
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -34,7 +42,39 @@ from .serializers import (
     SubmitProjectSerializer,
 )
 
+# The signed-bundle envelope verify.py checks. The payload is a nested object
+# holding the raw scores, rubric weights, method and ranking, kept opaque here
+# because its bytes are canonicalised and signed as a whole.
+BUNDLE_ENVELOPE = inline_serializer(
+    name="SignedBundle",
+    fields={
+        "payload": serializers.DictField(help_text="Canonical, signed result payload."),
+        "digest": serializers.CharField(help_text="sha256 of the canonical payload bytes."),
+        "public_key": serializers.CharField(help_text="Ed25519 public key, hex."),
+        "signature": serializers.CharField(help_text="Ed25519 signature over the digest, hex."),
+    },
+)
 
+
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="gallery_list",
+        summary="List the public project gallery",
+        tags=["Gallery"],
+        responses={200: ProjectSerializer(many=True)},
+    ),
+    post=extend_schema(
+        operation_id="project_submit",
+        summary="Submit a project to the open event",
+        tags=["Gallery"],
+        request=SubmitProjectSerializer,
+        responses={
+            201: SubmitProjectSerializer,
+            401: OpenApiResponse(description="Authentication required to submit."),
+            403: OpenApiResponse(description="Submissions are closed for this event."),
+        },
+    ),
+)
 class ProjectListCreateView(ListAPIView):
     """GET is the public project list. POST is a new submission, refused
     once the event deadline has passed."""
@@ -84,6 +124,39 @@ class JudgeScoresView(APIView):
 
     permission_classes = [IsJudge]
 
+    @extend_schema(
+        operation_id="judge_scores",
+        summary="Read a judge's own scores",
+        description=(
+            "Returns the calling judge's scores. Pass judge_id to read another "
+            "judge: allowed only for an organizer or admin, refused with 403 for a "
+            "judge asking about a peer. That check is enforced in the backend, so a "
+            "curl cannot slip past a hidden template button."
+        ),
+        tags=["Judging"],
+        parameters=[
+            OpenApiParameter(
+                name="judge_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="External id of the judge to read. Defaults to the caller.",
+            )
+        ],
+        responses={
+            200: inline_serializer(
+                name="JudgeScores",
+                fields={
+                    "judge_id": serializers.CharField(),
+                    "judge_name": serializers.CharField(),
+                    "count": serializers.IntegerField(),
+                    "scores": JudgeScoreSerializer(many=True),
+                },
+            ),
+            403: OpenApiResponse(description="You may only read your own scores."),
+            404: OpenApiResponse(description="No such judge."),
+        },
+    )
     def get(self, request):
         caller = request.user
         requested = request.query_params.get("judge_id")
@@ -128,6 +201,18 @@ class CsvExportView(APIView):
 
     permission_classes = [IsOrganizer]
 
+    @extend_schema(
+        operation_id="results_export_csv",
+        summary="Export weighted results as CSV",
+        tags=["Export"],
+        responses={
+            (200, "text/csv"): OpenApiResponse(
+                response=OpenApiTypes.STR,
+                description="One row per project: ids, per-criterion means and the weighted mean.",
+            ),
+            403: OpenApiResponse(description="This route is for organizers only."),
+        },
+    )
     def get(self, request):
         criteria = list(Criterion.objects.order_by("order", "id"))
         header = ["project_id", "title", "track", "team", "review_count"]
@@ -192,6 +277,24 @@ class ProgressView(APIView):
 
     permission_classes = [IsOrganizer]
 
+    @extend_schema(
+        operation_id="review_progress",
+        summary="Organizer review-progress summary",
+        tags=["Judging"],
+        responses={
+            200: inline_serializer(
+                name="ReviewProgress",
+                fields={
+                    "projects": serializers.IntegerField(),
+                    "projects_with_reviews": serializers.IntegerField(),
+                    "projects_missing_reviews": serializers.IntegerField(),
+                    "total_reviews": serializers.IntegerField(),
+                    "avg_reviews_per_project": serializers.FloatField(),
+                },
+            ),
+            403: OpenApiResponse(description="This route is for organizers only."),
+        },
+    )
     def get(self, request):
         projects = Project.objects.all()
         total = projects.count()
@@ -221,6 +324,26 @@ class PublishResultsView(APIView):
 
     permission_classes = [IsOrganizer]
 
+    @extend_schema(
+        operation_id="results_publish",
+        summary="Publish and sign the results bundle",
+        tags=["Results"],
+        request=inline_serializer(
+            name="PublishRequest",
+            fields={
+                "method": serializers.ChoiceField(
+                    choices=["additive", "zscore"],
+                    required=False,
+                    help_text="Scoring method. Defaults to additive.",
+                )
+            },
+        ),
+        responses={
+            201: BUNDLE_ENVELOPE,
+            400: OpenApiResponse(description="There are no scores to publish yet."),
+            403: OpenApiResponse(description="This route is for organizers only."),
+        },
+    )
     def post(self, request):
         from .judging import adapter, bundle as bundle_mod, keys
 
@@ -270,6 +393,15 @@ class BundleView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="results_bundle",
+        summary="Fetch the latest signed results bundle",
+        tags=["Results"],
+        responses={
+            200: BUNDLE_ENVELOPE,
+            404: OpenApiResponse(description="No results have been published yet."),
+        },
+    )
     def get(self, request):
         row = Bundle.objects.first()
         if row is None:
@@ -286,6 +418,20 @@ class VerificationKeyView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="verification_key",
+        summary="Fetch the Ed25519 verification key",
+        tags=["Verification"],
+        responses={
+            200: inline_serializer(
+                name="VerificationKey",
+                fields={
+                    "algorithm": serializers.CharField(),
+                    "public_key": serializers.CharField(help_text="Ed25519 public key, hex."),
+                },
+            )
+        },
+    )
     def get(self, request):
         from .judging import keys
 
