@@ -50,6 +50,11 @@ class Event(models.Model):
     submissions_close = models.DateTimeField()
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
+    # Results stay hidden until an organizer publishes. Scores and rankings
+    # are not visible to a visitor, participant or judge while this is false,
+    # so nobody games their entry against a live leaderboard. Publishing the
+    # signed results bundle flips this in the same organizer action.
+    results_published = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
