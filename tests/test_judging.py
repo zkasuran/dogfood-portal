@@ -8,8 +8,7 @@ fixture so the tests do not depend on the event file.
 """
 # --- path bootstrap -------------------------------------------------------------
 # The core lives in src/core/judging/ and the verifier at the repo root. Put both on
-# the path so this suite runs under pytest and standalone (python3 tests/test_judging.py)
-# from a fresh clone. Wiring only; the tests and the fixture below are the core's own.
+# the path so this suite runs under pytest and standalone (python3 tests/test_judging.py).
 import os as _os
 import sys as _sys
 
@@ -18,6 +17,7 @@ for _p in (_os.path.join(_ROOT, "src", "core", "judging"), _ROOT):
     if _p not in _sys.path:
         _sys.path.insert(0, _p)
 # --------------------------------------------------------------------------------
+
 import copy
 from decimal import Decimal
 
@@ -101,6 +101,16 @@ def test_bundle_is_deterministic():
     a = bundle.build_payload(FX, W, code_commit="c")
     b = bundle.build_payload(FX, W, code_commit="c")
     assert canonical.sha256_hex(a) == canonical.sha256_hex(b)
+
+
+def test_bundle_accepts_decimal_weights():
+    import json
+    key = signing.load_private_pem(signing.generate_private_pem())
+    w = {"functionality": Decimal("0.4"), "quality": Decimal("0.4"), "innovation": Decimal("0.2")}
+    signed = bundle.sign_payload(bundle.build_payload(FX, w, code_commit="c"), key)
+    json.dumps(signed)  # no Decimal survives into the payload, so this cannot raise
+    assert all(isinstance(v, float) for v in signed["payload"]["rubric"]["weights"].values())
+    assert all(ok for _, ok in verify.check(signed))
 
 
 def test_sign_and_verify_roundtrip():

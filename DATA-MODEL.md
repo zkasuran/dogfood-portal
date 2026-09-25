@@ -35,7 +35,8 @@ gaps and unfinished batches are read off this table against the scores that exis
 `Rubric(event, name)` and `Criterion(rubric, key, name, weight, order)`:
 - weights are `Decimal` and live on the criterion, per event. This is the weighted rubric the
   market leader cannot express. Weights are versioned by rubric, never edited in place under a
-  score.
+  score. They are cast to float when they enter a signed results bundle, because the canonical
+  JSON encoding cannot represent a Decimal.
 
 `Score(judge, project, comment, created_at)` and `ScoreValue(score, criterion, value)`:
 - one `Score` per judge per project, with one `ScoreValue` per criterion (integer 1 to 5). The

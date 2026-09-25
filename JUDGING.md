@@ -44,9 +44,9 @@ Coverage on this fixture runs from 2 to 5 reviews per project. Two mistakes to a
       final_i = mu + B_i * (bias-adjusted mean quality of project i)
       B_i     = n_i / (n_i + k)
 
-  On this fixture `k = 0.605`, fit from the data as the residual variance over the
-  between-project variance. A 2-review project keeps about 77 percent of its own signal, a
-  5-review project about 89 percent, so coverage buys confidence rather than rank. We report
+  On this fixture `k = 0.81`, fit from the data as the residual variance over the
+  between-project variance. A 2-review project keeps about 71 percent of its own signal, a
+  5-review project about 86 percent, so coverage buys confidence rather than rank. We report
   every score with an uncertainty band and its review count. Projects whose bands overlap are
   a statistical tie and go to a tie-break, not to a decision on the third decimal. This is the
   shrinkage result of Efron and Morris (1975).
@@ -64,7 +64,7 @@ Coverage on this fixture runs from 2 to 5 reviews per project. Two mistakes to a
 
 For close calls we also support Bradley-Terry pairwise ranking. Within each judge we turn
 "scored project A above project B" into one win for A over B, which cancels that judge's
-leniency because both projects passed the same judge. On the fixture this synthesizes 254
+leniency because both projects passed the same judge. On the fixture this synthesizes 277
 within-judge comparisons over the 40 projects. We fit strengths with the standard MM
 iteration and add a virtual opponent to every project, the regularizer from the Crowd-BT
 paper, so the estimate stays unique even where the comparison graph is sparse. Ranking is by
@@ -103,7 +103,7 @@ it without a database client.
   needs more reviews per judge than this event has, so it would add noise.
 - The primary method is the bias-removal-plus-shrinkage model above. As a cross-check we run
   a guarded per-judge z-score (mean-center, divide by a spread that is floored and that falls
-  back to mean-centering for a flat or thin judge). The two agree on 8 of the top 10 projects
+  back to mean-centering for a flat or thin judge). The two agree on 6 of the top 10 projects
   on the fixture. Where they disagree we say so.
 
 ## References

@@ -47,7 +47,7 @@ def build_payload(fixture, weights=None, code_commit="unknown", method="additive
         "bundle_version": BUNDLE_VERSION,
         "method": model["method"],
         "method_params": params,
-        "rubric": {"weights": weights, "version": "v1"},
+        "rubric": {"weights": {k: float(v) for k, v in weights.items()}, "version": "v1"},
         "code_commit": code_commit,
         "raw_scores": raw,
         "ranking": ranking,
