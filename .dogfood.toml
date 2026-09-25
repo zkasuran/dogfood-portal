@@ -1,0 +1,28 @@
+# .dogfood.toml
+# Points the acceptance checker at this portal. Run:
+#   python3 spec/run.py .dogfood.toml
+# The [auth] tokens are printed by the seed command on `docker compose up`.
+# They are dev and seed only, so an offline checker can attach a per-role
+# header. The checker never logs in.
+
+[portal]
+base_url = "http://localhost:8080"
+
+[tiers]
+claimed = ["T1", "T2"]
+pitch = "A hackathon judging portal that boots offline in one container, seeded, with role isolation enforced in the API."
+
+[auth]
+organizer   = "Authorization: Token organizer0000000000000000000000000000000"
+judge_a     = "Authorization: Token judgea0000000000000000000000000000000000"
+judge_b     = "Authorization: Token judgeb0000000000000000000000000000000000"
+participant = "Authorization: Token participant00000000000000000000000000000"
+
+[routes]
+gallery      = "/projects"
+submit       = "/api/projects"
+judge_scores = "/api/judge/scores"
+# peer_scores is the url that returns judge_a's (jdg_07) scores. The
+# checker visits it as judge_b, who is refused with 403 in the backend.
+peer_scores  = "/api/judge/scores?judge_id=jdg_07"
+csv_export   = "/api/export/results.csv"

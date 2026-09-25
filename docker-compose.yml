@@ -1,0 +1,23 @@
+# One service. `docker compose up` builds the image, then the container
+# migrates, seeds the fixtures, and serves the portal on localhost:8080.
+# No cloud account, no hosted database, no external API. It runs offline.
+#
+# The host port can be overridden if 8080 is taken, for example:
+#   DOGFOOD_PORT=9000 docker compose up
+# The portal always listens on 8080 inside the container.
+
+services:
+  portal:
+    build: .
+    image: dogfood-portal
+    ports:
+      - "${DOGFOOD_PORT:-8080}:8080"
+    environment:
+      - DJANGO_DEBUG=0
+      - DJANGO_DB_PATH=/data/db.sqlite3
+    volumes:
+      - dogfood-data:/data
+    restart: unless-stopped
+
+volumes:
+  dogfood-data:
