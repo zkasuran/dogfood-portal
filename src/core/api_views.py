@@ -7,6 +7,7 @@ in the backend, so a curl cannot slip past a hidden template button.
 """
 import csv
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -17,10 +18,12 @@ from rest_framework.views import APIView
 
 from .models import (
     AuditLog,
+    Bundle,
     Criterion,
     Event,
     Project,
     Role,
+    Rubric,
     Score,
     User,
 )
@@ -205,3 +208,86 @@ class ProgressView(APIView):
                 "avg_reviews_per_project": round(avg_reviews, 2),
             }
         )
+
+
+class PublishResultsView(APIView):
+    """Organizer-only. Read the live scores through the adapter, run the judging
+    engine, sign the result and store it. A judge cannot publish, and the same
+    backend role check as every other route enforces that, not a hidden button.
+
+    POST body may set {"method": "additive"|"zscore"}. Default is additive.
+    Returns the signed bundle so an organizer can hand it straight to verify.py.
+    """
+
+    permission_classes = [IsOrganizer]
+
+    def post(self, request):
+        from .judging import adapter, bundle as bundle_mod, keys
+
+        rubric = Rubric.objects.order_by("id").first()
+        weights = adapter.rubric_weights(rubric)
+        source = adapter.build_source()
+        if not source["scores"]:
+            return Response(
+                {"detail": "There are no scores to publish yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        method = request.data.get("method", "additive")
+        if method not in ("additive", "zscore"):
+            method = "additive"
+
+        payload = bundle_mod.build_payload(
+            source, weights, code_commit=settings.GIT_COMMIT, method=method
+        )
+        private_key, _ = keys.get_or_create_private_key(settings.SIGNING_KEY_PATH)
+        signed = bundle_mod.sign_payload(payload, private_key)
+
+        row = Bundle.objects.create(
+            payload=signed["payload"],
+            digest=signed["digest"],
+            signature=signed["signature"],
+            public_key=signed["public_key"],
+            code_commit=settings.GIT_COMMIT,
+        )
+        AuditLog.objects.create(
+            actor=request.user,
+            action="results.publish",
+            target=str(row.id),
+            detail={
+                "digest": row.digest,
+                "method": payload["method"],
+                "code_commit": row.code_commit,
+                "projects_ranked": len(payload["ranking"]),
+            },
+        )
+        return Response(signed, status=status.HTTP_201_CREATED)
+
+
+class BundleView(APIView):
+    """Public. The latest signed results bundle, in the exact form verify.py checks.
+    Results are meant to be checkable, so no auth is required to read one."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        row = Bundle.objects.first()
+        if row is None:
+            return Response(
+                {"detail": "No results have been published yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(row.as_bundle())
+
+
+class VerificationKeyView(APIView):
+    """Public. The Ed25519 public key that signs every bundle, as hex, so anyone can
+    verify a downloaded bundle without trusting the host and without a key of ours."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .judging import keys
+
+        public_key = keys.public_key_hex(settings.SIGNING_KEY_PATH)
+        return Response({"algorithm": "ed25519", "public_key": public_key})

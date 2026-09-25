@@ -96,7 +96,18 @@ class Command(BaseCommand):
         self._scores(data["scores"], judges, projects, criteria)
 
         known = self._known_accounts(judges, data)
+        self._ensure_signing_key()
         self._print_auth(known)
+
+    def _ensure_signing_key(self):
+        """Generate the Ed25519 signing key on first boot, or load it if present.
+        Idempotent. The private key is never logged or printed."""
+        from core.judging import keys
+
+        _, generated = keys.get_or_create_private_key(settings.SIGNING_KEY_PATH)
+        self.stdout.write(
+            "signing key generated" if generated else "signing key loaded"
+        )
 
     def _event(self, ev):
         event, _ = Event.objects.get_or_create(

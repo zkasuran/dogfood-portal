@@ -99,6 +99,15 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Ed25519 signing key for results bundles. The deployment generates it on first boot
+# and keeps it in a mounted volume, never a personal or shared key. Override the path
+# per deployment. Default sits under /data, the same volume as the SQLite file.
+SIGNING_KEY_PATH = os.environ.get("DOGFOOD_SIGNING_KEY_PATH", "/data/signing_key.pem")
+
+# The code commit baked into the image at build time, named in every signed bundle so
+# a result points at the exact code that produced it.
+GIT_COMMIT = os.environ.get("GIT_COMMIT", "unknown")
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
