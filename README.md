@@ -1,48 +1,49 @@
 # DOGFOOD portal
 
-An open source, self hostable hackathon submission and judging portal. It
-boots offline in one container, seeds itself with the shared fixture data,
-and enforces judge role isolation in the API rather than in the templates.
+An open source, self hostable hackathon submission and judging portal. Teams
+submit projects to a public gallery, judges score them against a weighted rubric
+and organizers publish results. It boots offline in one container with the shared
+fixture data already loaded.
+
+The differentiator is Reproducible Signed Results. When an organizer publishes,
+the portal emits a signed bundle carrying the raw scores, the rubric with its
+weights, the scoring method with its parameters plus the code commit that produced
+them. Anyone recomputes the ranking from that bundle and checks the signature with
+a standalone `verify.py`, so a winner is provable without trusting the host. See
+JUDGING.md.
 
 Built for DOGFOOD 2026 on Django, Django REST Framework and SQLite.
 
-## Quick start
+## Run it
+
+One command brings up a seeded, working portal with the network off:
 
 ```bash
 docker compose up
 ```
 
-That builds one image and starts one container. On boot it migrates the
-database, collects static files, loads `spec/fixtures.json` and serves the
-portal at http://localhost:8080. No cloud account, no hosted database, no
-external API. It runs with the network off.
+That builds one image and starts one container. On boot it migrates the database,
+loads `spec/fixtures.json`, generates a signing key on first boot then serves the
+portal at http://localhost:8080. There is no cloud account, no hosted database, no
+external API.
 
-Open http://localhost:8080 for the gallery, http://localhost:8080/admin/ for
-the organizer console (seed login `organizer` / `organizer`) and
+Open http://localhost:8080 for the gallery, http://localhost:8080/admin/ for the
+organizer console (seed login `organizer` / `organizer`) or
 http://localhost:8080/api/docs for the OpenAPI browser.
 
-If port 8080 is already taken on your machine, publish on another host port:
+If port 8080 is taken, publish on another host port:
 
 ```bash
 DOGFOOD_PORT=9000 docker compose up
 ```
 
-The portal still listens on 8080 inside the container, so update `base_url`
-in `.dogfood.toml` to match if you run the checker against the new port.
-
-## Run the acceptance checker
-
-```bash
-python3 spec/run.py .dogfood.toml > acceptance-report.txt
-```
-
-The committed `acceptance-report.txt` shows all seven checks passing at T1
-and T2.
+The portal still listens on 8080 inside the container. Update `base_url` in
+`.dogfood.toml` to match if you run the checker against the new port.
 
 ## The seed tokens
 
-On boot the seed command prints four dev auth headers and they are already
-copied into `.dogfood.toml`:
+The checker never logs in, so the seed creates one account per role with a fixed
+token and prints the four header lines on boot:
 
 ```
 organizer   = "Authorization: Token organizer0000000000000000000000000000000"
@@ -51,60 +52,130 @@ judge_b     = "Authorization: Token judgeb0000000000000000000000000000000000"
 participant = "Authorization: Token participant00000000000000000000000000000"
 ```
 
-These four tokens are dev and seed only. They exist so an offline checker
-that never logs in can attach a per-role header. Do not carry them into a
-real deployment. Rotate them by editing the seed command or deleting the
-tokens in the admin.
+They are already copied into `.dogfood.toml [auth]`. These four tokens are dev and
+seed only. They exist so an offline checker can attach a per-role header without a
+login step. Do not carry them into a real deployment, which issues normal tokens.
+
+## Run the acceptance checker
+
+```bash
+python3 spec/run.py .dogfood.toml > acceptance-report.txt
+```
+
+The checker is standard library Python with nothing to install. It reads
+`fixtures.json` beside `run.py`, attaches a per-role token from `.dogfood.toml`
+then makes seven HTTP requests. The committed `acceptance-report.txt` shows 7 of 7
+PASS at T1 and T2.
 
 ## Roles and isolation
 
-Every account has one role: visitor, participant, judge, organizer or admin.
-The role is the security boundary, enforced by DRF permission classes in
-`src/core/permissions.py`.
+Every account has one role: visitor, participant, judge, organizer or admin. The
+role is the security boundary, enforced by DRF permission classes in
+`src/core/permissions.py` rather than in a template. A curl as the wrong role is
+refused before any view code runs.
 
 - The gallery is public.
-- Submitting after the deadline is refused with 403. The fixture event
-  closed on 2026-03-01, so the seeded portal is already closed.
-- `GET /api/judge/scores` returns the caller's own scores. A judge sees only
-  their own. An organizer or admin may read another judge's scores by
-  passing `?judge_id=<id>`. A judge asking for a peer by id is refused with
-  403. That is the check most portals fail, so it lives in the backend and a
-  curl as the wrong judge is turned away.
-- `GET /api/export/results.csv` is organizer only. It carries the weighted
-  per criterion means and a weighted composite, so the criterion weights an
-  organizer set are visible in the export.
+- Submitting after the deadline is refused with 403. The fixture event closed on
+  2026-03-01, so the seeded portal is already closed.
+- `GET /api/judge/scores` returns the caller's own scores. A judge sees only their
+  own. An organizer or admin may read another judge's scores with `?judge_id=<id>`.
+  A judge asking for a peer by id is refused with 403. That is the check most
+  portals fail, so it lives in the backend.
+- `GET /api/export/results.csv` is organizer only. A judge or a participant is
+  refused with 403.
 
-## Route map
+For example, judge_b asking for judge_a (fixture id `jdg_07`) is turned away:
+
+```bash
+curl -H "Authorization: Token judgeb0000000000000000000000000000000000" \
+  "http://localhost:8080/api/judge/scores?judge_id=jdg_07"
+# HTTP 403 Forbidden
+```
+
+## How judging works
+
+Reviews become a ranking that stays fair when judges see different projects, when
+some projects get more reviews than others and when a judge scores everyone the
+same. Criteria are weighted into a composite, judge bias is removed with an
+additive model then each project's quality is shrunk toward the mean by its review
+count, so coverage buys confidence rather than rank. A guarded z-score runs as a
+cross-check. JUDGING.md carries the math, the awkward cases and the references.
+
+## Reproducible signed results
+
+On publish the portal builds a bundle of the raw scores, the rubric with its
+weights, the method with its fitted parameters plus the code commit, hashes it with
+sha256 over a canonical encoding then signs it with an Ed25519 key. The key is
+generated by the deployment on first boot and kept in the deployment's own volume.
+It is never a personal or shared key, because the product is meant to be forked and
+self hosted. The public key is served at `/api/verification-key` and travels inside
+every bundle.
+
+Publish requires an organizer token and at least one score. On the seeded portal,
+publish once, read the bundle then verify it:
+
+```bash
+curl -X POST -H "Authorization: Token organizer0000000000000000000000000000000" \
+  http://localhost:8080/api/results/publish
+curl http://localhost:8080/api/results/bundle > bundle.json
+python3 verify.py bundle.json
+```
+
+`verify.py` recomputes the ranking from the raw scores, confirms it matches the
+published ranking, checks the digest then verifies the signature against the public
+key in the bundle. It needs only the standard library plus `cryptography` for the
+signature step. Tampering with a score or a rank fails the check.
+
+## API
+
+The API is documented at `/api/docs` (OpenAPI via drf-spectacular). The main routes:
 
 | Name | Path | Who |
 | --- | --- | --- |
-| gallery | `/projects` | public |
+| gallery | `GET /projects` | public |
 | submit | `POST /api/projects` | participant, refused when closed |
-| judge scores | `/api/judge/scores` | judge, organizer, admin |
-| peer scores | `/api/judge/scores?judge_id=<id>` | own judge or organizer/admin |
-| csv export | `/api/export/results.csv` | organizer, admin |
-| health | `/health` | public |
-| api docs | `/api/docs` | public |
+| judge scores | `GET /api/judge/scores` | judge, organizer, admin |
+| peer scores | `GET /api/judge/scores?judge_id=<id>` | own judge or organizer/admin |
+| csv export | `GET /api/export/results.csv` | organizer, admin |
+| publish | `POST /api/results/publish` | organizer, admin |
+| results bundle | `GET /api/results/bundle` | public |
+| verification key | `GET /api/verification-key` | public |
+| progress | `GET /api/progress` | organizer, admin |
+| health | `GET /health` | public |
+| api docs | `GET /api/docs` | public |
+
+## Move an event in or out
+
+An event exports to one JSON file and imports into a fresh database, so an
+organizer can carry a whole event between instances:
+
+```bash
+python manage.py export_event evt_01 > event.json
+python manage.py import_event event.json
+```
+
+The round trip preserves every project, team, judge, score and the weighted rubric,
+including the flagged duplicate. MIGRATION.md has the exact commands and what
+travels.
 
 ## Layout
 
 ```
 src/            Django project (dogfood) and the core app
-  core/models.py        the schema
-  core/permissions.py   role isolation
-  core/api_views.py     judge scores, submit, CSV export
-  core/management/commands/seed.py   loads fixtures, prints tokens
+  core/models.py                              the schema
+  core/permissions.py                         role isolation
+  core/api_views.py                           judge scores, submit, CSV, publish
+  core/judging/                               pure scoring engine, signing, bundle
+  core/management/commands/seed.py            loads fixtures, prints tokens
+  core/management/commands/export_event.py    dump an event to JSON
+  core/management/commands/import_event.py    load an event into a fresh database
 spec/           the acceptance checker, fixtures and this program's spec
+verify.py       standalone bundle verifier
 .dogfood.toml   points the checker at the portal
 docker-compose.yml   one command to a seeded, offline portal
 ```
 
-## Tiers claimed
-
-T1 and T2, verified by `acceptance-report.txt`. The schema already carries
-the T3 and T4 tables (votes, comments, audit log, tokens) so the higher
-tiers build on top without a migration rewrite.
-
 ## License
 
-MIT. See `LICENSE`.
+MIT. See `LICENSE`. The program requires an OSI license, so the portal ships under
+MIT to be forked and self hosted freely.
