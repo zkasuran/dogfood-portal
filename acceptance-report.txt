@@ -1,5 +1,5 @@
 DOGFOOD 2026 acceptance report
-portal: http://localhost:8080
+portal: http://localhost:8099
 claimed: T1 T2
 fixtures: /home/asuran/Downloads/hackathon-hq/work/dogfood/spec/fixtures.json
 
