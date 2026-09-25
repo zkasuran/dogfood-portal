@@ -44,8 +44,8 @@ class JudgeScoreSerializer(serializers.ModelSerializer):
 
 class SubmitProjectSerializer(serializers.Serializer):
     """Input for a new submission. Kept small on purpose: the checker posts
-    only title and summary, and the deadline is enforced before we touch
-    the body."""
+    only title and summary. The deadline is enforced before we touch the
+    body."""
 
     title = serializers.CharField(max_length=200)
     summary = serializers.CharField(max_length=500, required=False, allow_blank=True)

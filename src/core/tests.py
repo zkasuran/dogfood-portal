@@ -1,5 +1,5 @@
 """Tests for the load-bearing behaviour: role isolation, deadline
-enforcement, and the public gallery. These mirror the seven acceptance
+enforcement and the public gallery. These mirror the seven acceptance
 checks but assert them directly against the API, so a regression is caught
 before the checker runs."""
 from datetime import timezone as dt_timezone

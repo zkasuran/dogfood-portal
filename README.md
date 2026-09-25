@@ -13,12 +13,12 @@ docker compose up
 ```
 
 That builds one image and starts one container. On boot it migrates the
-database, collects static files, loads `spec/fixtures.json`, and serves the
+database, collects static files, loads `spec/fixtures.json` and serves the
 portal at http://localhost:8080. No cloud account, no hosted database, no
 external API. It runs with the network off.
 
 Open http://localhost:8080 for the gallery, http://localhost:8080/admin/ for
-the organizer console (seed login `organizer` / `organizer`), and
+the organizer console (seed login `organizer` / `organizer`) and
 http://localhost:8080/api/docs for the OpenAPI browser.
 
 If port 8080 is already taken on your machine, publish on another host port:
@@ -81,7 +81,7 @@ The role is the security boundary, enforced by DRF permission classes in
 | gallery | `/projects` | public |
 | submit | `POST /api/projects` | participant, refused when closed |
 | judge scores | `/api/judge/scores` | judge, organizer, admin |
-| peer scores | `/api/judge/scores?judge_id=<id>` | own judge, or organizer/admin |
+| peer scores | `/api/judge/scores?judge_id=<id>` | own judge or organizer/admin |
 | csv export | `/api/export/results.csv` | organizer, admin |
 | health | `/health` | public |
 | api docs | `/api/docs` | public |

@@ -144,7 +144,7 @@ class Project(models.Model):
 class JudgeAssignment(models.Model):
     """A judge is assigned a project in a batch. Assignments are disjoint,
     so no judge is handed a project a peer is already reviewing in the same
-    batch, and no judge sees a peer's ballot."""
+    batch. No judge sees a peer's ballot."""
 
     judge = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assignments"

@@ -1,7 +1,7 @@
 """API views. Public gallery data, judge score isolation, CSV export.
 
 The load-bearing rule is in JudgeScoresView: a judge may read their own
-scores, and only an organizer or admin may read someone else's. A judge
+scores. Only an organizer or admin may read someone else's. A judge
 asking for a peer's scores by id is refused with 403. That check is here
 in the backend, so a curl cannot slip past a hidden template button.
 """
@@ -77,7 +77,7 @@ class ProjectListCreateView(ListAPIView):
 
 
 class JudgeScoresView(APIView):
-    """A judge's own scores, or a peer's only for an organizer or admin."""
+    """The caller's own scores. A peer's only for an organizer or admin."""
 
     permission_classes = [IsJudge]
 
