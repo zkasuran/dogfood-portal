@@ -117,6 +117,14 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Write endpoints that a visitor can reach (voting, comments) are rate
+    # limited by scope. The scopes are attached per view, not globally, so the
+    # judge and organizer routes stay unthrottled. Keyed by account for a
+    # logged-in caller and by client address for an anonymous one.
+    "DEFAULT_THROTTLE_RATES": {
+        "vote": "30/min",
+        "comment": "20/min",
+    },
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
