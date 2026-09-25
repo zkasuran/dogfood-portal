@@ -1,7 +1,7 @@
 """Integration tests for the judging engine wired into the app.
 
 These cover the ORM-to-records adapter (weighted composite plus duplicate merge), the
-organizer-only publish action, the public results bundle and verification key, and the
+organizer-only publish action, the public results bundle and verification key, plus the
 standalone verify.py passing on a real bundle while failing on a tampered one. The pure
 core has its own suite in tests/test_judging.py; this exercises the Django side.
 """

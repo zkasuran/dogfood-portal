@@ -3,7 +3,7 @@
 The engine works on `(judge_id, canonical_project_id, composite)` triples and never
 imports Django. This module reads live Score, ScoreValue, Criterion and Rubric rows,
 maps a duplicate project onto its canonical sibling through `is_duplicate` and
-`duplicate_of`, applies the rubric's weights with `engine.composite`, and produces
+`duplicate_of`, applies the rubric's weights with `engine.composite` and produces
 the records the engine expects. It also builds the fixture-shaped source that
 `bundle.build_payload` consumes, so a published bundle is built from the app's live
 data rather than from fixtures.json.

@@ -11,8 +11,9 @@ import signing  # top-level; resolved by core.judging.__init__ path setup
 
 
 def get_or_create_private_key(path):
-    """Return (private_key, generated). Load the PEM at `path`, or generate one and
-    write it owner-only on first call. Idempotent. Never prints the key."""
+    """Return (private_key, generated). Load the PEM at `path` if it exists, else
+    generate one and write it owner-only on the first call. Idempotent. Never prints
+    the key."""
     if os.path.exists(path):
         with open(path, "rb") as fh:
             return signing.load_private_pem(fh.read()), False

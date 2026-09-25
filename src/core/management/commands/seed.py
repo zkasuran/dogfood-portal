@@ -100,7 +100,7 @@ class Command(BaseCommand):
         self._print_auth(known)
 
     def _ensure_signing_key(self):
-        """Generate the Ed25519 signing key on first boot, or load it if present.
+        """Generate the Ed25519 signing key on first boot. Load it if present.
         Idempotent. The private key is never logged or printed."""
         from core.judging import keys
 

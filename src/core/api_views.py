@@ -212,7 +212,7 @@ class ProgressView(APIView):
 
 class PublishResultsView(APIView):
     """Organizer-only. Read the live scores through the adapter, run the judging
-    engine, sign the result and store it. A judge cannot publish, and the same
+    engine, sign the result and store it. A judge cannot publish and the same
     backend role check as every other route enforces that, not a hidden button.
 
     POST body may set {"method": "additive"|"zscore"}. Default is additive.
