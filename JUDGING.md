@@ -68,7 +68,8 @@ leniency because both projects passed the same judge. On the fixture this synthe
 within-judge comparisons over the 40 projects. We fit strengths with the standard MM
 iteration and add a virtual opponent to every project, the regularizer from the Crowd-BT
 paper, so the estimate stays unique even where the comparison graph is sparse. Ranking is by
-the fitted strength.
+the fitted strength. Each strength carries a bootstrap standard error from resampling the
+comparisons, so a reader sees which ranks are solid and which lean on only a few comparisons.
 
 The pairwise and the weighted-rubric rankings agree on 7 of the top 10 projects and
 disagree on the top seat, which is exactly the signal a pairwise pass is for. We publish both
