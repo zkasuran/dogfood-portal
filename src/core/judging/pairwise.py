@@ -7,10 +7,13 @@ Comparing within a judge cancels that judge's leniency and scale, which is why p
 needs no per-judge normalization. Ties are dropped, so a judge who scored everyone the
 same contributes nothing, correctly. Strengths are fit by the standard MM iteration with
 a virtual opponent added for every project (the regularizer from the Crowd-BT paper) so
-the estimate is unique even when the comparison graph is sparse or disconnected. Sources
-in work/dogfood/.hq/research/judging-engine.md section 3.
+the estimate is unique even when the comparison graph is sparse or disconnected. Each
+strength is reported with a bootstrap standard error, so a reader sees which ranks are
+solid and which lean on a handful of comparisons. Sources in
+work/dogfood/.hq/research/judging-engine.md section 3.
 """
 import math
+import random
 from collections import defaultdict
 from itertools import combinations
 
@@ -35,11 +38,10 @@ def build_pairs(records):
     return wins, projects
 
 
-def fit(records, iters=2000, tol=1e-10):
-    """Fit strengths by the MM iteration with a virtual opponent (strength 1) that every
-    project both beats once and loses to once. That regularizer pins the scale and keeps
-    the maximum likelihood estimate unique on a sparse or disconnected graph."""
-    wins, projects = build_pairs(records)
+def _mm_fit(wins, projects, iters=2000, tol=1e-10):
+    """The MM iteration with a virtual opponent (strength 1) that every project both beats
+    once and loses to once. That regularizer pins the scale and keeps the maximum
+    likelihood estimate unique on a sparse or disconnected graph. Returns pi per project."""
     projects = sorted(projects)
     W = defaultdict(float)
     ncmp = defaultdict(lambda: defaultdict(int))
@@ -51,7 +53,7 @@ def fit(records, iters=2000, tol=1e-10):
         opp[i].add(k)
         opp[k].add(i)
     pi = {p: 1.0 for p in projects}
-    pi_o = 1.0  # fixed virtual-node strength, pins the otherwise free scale
+    pi_o = 1.0
     for _ in range(iters):
         new = {}
         for i in projects:
@@ -62,9 +64,46 @@ def fit(records, iters=2000, tol=1e-10):
         pi = new
         if maxrel < tol:
             break
+    return pi
+
+
+def fit(records, iters=2000, tol=1e-10):
+    """Fit strengths, one log-strength per project. Deterministic."""
+    wins, projects = build_pairs(records)
+    pi = _mm_fit(wins, projects, iters, tol)
     strength = {p: math.log(pi[p]) for p in projects}
     return {"method": "bradley-terry-mm-virtual", "pi": pi, "strength": strength,
-            "comparisons": sum(wins.values()), "projects": len(projects)}
+            "comparisons": sum(wins.values()), "projects": len(pi)}
+
+
+def bootstrap_se(records, draws=300, seed=0):
+    """Standard error of each project's log-strength, by resampling the synthesized
+    comparisons with replacement and refitting. Deterministic given the seed, so a bundle
+    that reports these numbers stays reproducible. Returns {project: se}."""
+    wins, projects = build_pairs(records)
+    projects = sorted(projects)
+    pool = []
+    for (i, k), c in wins.items():
+        pool.extend([(i, k)] * c)
+    if not pool:
+        return {p: 0.0 for p in projects}
+    rng = random.Random(seed)
+    samples = {p: [] for p in projects}
+    n = len(pool)
+    for _ in range(draws):
+        boot = defaultdict(int)
+        for _ in range(n):
+            i, k = pool[rng.randrange(n)]
+            boot[(i, k)] += 1
+        pi = _mm_fit(boot, projects)
+        for p in projects:
+            samples[p].append(math.log(pi[p]))
+    out = {}
+    for p in projects:
+        xs = samples[p]
+        mean = sum(xs) / len(xs)
+        out[p] = math.sqrt(sum((x - mean) ** 2 for x in xs) / len(xs))
+    return out
 
 
 def ranking(fit_out):
@@ -79,10 +118,13 @@ if __name__ == "__main__":
     fixture = engine.load_fixture(path)
     records, _ = engine.build_records(fixture)
     bt = fit(records)
+    se = bootstrap_se(records, draws=150)
     add = engine.additive_model(records)
     bt_order = ranking(bt)
     add_order = engine.ranking(add)
     print(f"pairwise comparisons synthesized: {bt['comparisons']} over {bt['projects']} projects")
+    top = bt_order[0]
+    print(f"BT winner: {top}  strength {bt['strength'][top]:.4f} +/- {se[top]:.4f}")
     print("BT top 5:      ", bt_order[:5])
     print("additive top 5:", add_order[:5])
     overlap = len(set(bt_order[:10]) & set(add_order[:10]))
