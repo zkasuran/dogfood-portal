@@ -18,7 +18,7 @@ Built for DOGFOOD 2026 on Django, Django REST Framework and SQLite.
 
 A walkthrough of one full lifecycle (create, submit, judge, publish), ending with the
 verifier passing on the real signed bundle then rejecting a tampered one:
-https://youtu.be/igjISVTL2ik
+https://youtu.be/pg0ozBi13Z4
 
 ## Run it
 
