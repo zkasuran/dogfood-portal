@@ -33,7 +33,7 @@
         </ul></li>
       <li data-cat><button aria-haspopup="true" aria-expanded="false">Developers <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
         <ul class="sub" role="menu">
-          <li><a href="#run">Run it<small>One command, offline</small></a></li>
+          <li><a href="#run">Run it<small>No install via Codespaces, or one command</small></a></li>
           <li><a href="#api">API<small>The main routes and who may call them</small></a></li>
           <li><a href="#source">Source and video<small>Repo, demo, writeup</small></a></li>
         </ul></li>
@@ -158,22 +158,38 @@ python3 verify.py bundle.json
 </section>
 <section class="wrap" id="run">
   <span class="eyebrow">Run it</span>
-  <h2 style="font-size:28px;margin:10px 0 8px">Run the real portal in one command</h2>
-  <p class="lead">One command clones the repo then boots a seeded, offline portal on your machine. No cloud account, no config, no external API. You need Docker and git installed.</p>
-  <div class="cmd"><code>git clone https://github.com/zkasuran/dogfood-portal &amp;&amp; cd dogfood-portal &amp;&amp; docker compose up</code><button data-copy>Copy</button></div>
-  <ol class="steps-timed">
-    <li><span class="tm">0:00</span><span>Paste the command and press enter. Docker builds one image the first time you run it.</span></li>
-    <li><span class="tm">~1 to 2 min</span><span><b>First build only.</b> Build layers stream past while it installs Python and Django. This is the slow step and it is normal, so wait for it. Every later run skips the build and starts in seconds.</span></li>
-    <li><span class="tm">~5 sec</span><span>The container prints <code>migrating database</code>, then <code>seeding fixtures</code>, then the four role login tokens.</span></li>
-    <li><span class="tm">ready</span><span>When you see <code>starting gunicorn on 0.0.0.0:8080</code>, open <a href="http://localhost:8080" target="_blank" rel="noopener">http://localhost:8080</a>.</span></li>
-  </ol>
-  <p class="lead" style="margin-top:20px">What to open once it is up:</p>
+  <h2 style="font-size:28px;margin:10px 0 8px">Run it with nothing installed</h2>
+  <p class="lead">Everything on this page (verify, tamper, recompute, the gallery, the judge view, the results) already runs in your browser with nothing to install. To boot the real backend, pick a path. The no-install one needs only a GitHub account.</p>
+  <div class="grid g2" style="margin-top:20px;align-items:start">
+    <div class="card">
+      <span class="tag">No install · runs in the cloud</span>
+      <h3>Open in GitHub Codespaces</h3>
+      <p style="margin:6px 0 12px">A cloud machine with Docker already set up. You need only a GitHub account, nothing on your computer.</p>
+      <a class="btn primary" href="https://codespaces.new/zkasuran/dogfood-portal" target="_blank" rel="noopener">Open in Codespaces</a>
+      <ol class="steps-timed" style="margin-top:14px">
+        <li><span class="tm">click</span><span>Create the Codespace. A browser editor opens with Docker preinstalled.</span></li>
+        <li><span class="tm">~1 to 2 min</span><span>In its terminal run <code>docker compose up</code>. First build only.</span></li>
+        <li><span class="tm">ready</span><span>A popup offers the forwarded port 8080. Click it and the portal opens in a new tab.</span></li>
+      </ol>
+    </div>
+    <div class="card">
+      <span class="tag">Have Docker · runs on your machine</span>
+      <h3>One command locally</h3>
+      <p style="margin:6px 0 12px">If Docker and git are installed, one line clones then boots it, fully offline.</p>
+      <div class="cmd"><code>git clone https://github.com/zkasuran/dogfood-portal &amp;&amp; cd dogfood-portal &amp;&amp; docker compose up</code><button data-copy>Copy</button></div>
+      <ol class="steps-timed" style="margin-top:12px">
+        <li><span class="tm">~1 to 2 min</span><span>First build installs Python and Django. It is normal, wait for it. Later runs start in seconds.</span></li>
+        <li><span class="tm">ready</span><span>When you see <code>starting gunicorn on 0.0.0.0:8080</code>, open <a href="http://localhost:8080" target="_blank" rel="noopener">localhost:8080</a>.</span></li>
+      </ol>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:22px">What to open once it is up:</p>
   <ul class="open-list">
-    <li><span class="inline">http://localhost:8080</span> the public gallery</li>
-    <li><span class="inline">http://localhost:8080/admin/</span> the organizer console, login <span class="inline">organizer</span> / <span class="inline">organizer</span></li>
-    <li><span class="inline">http://localhost:8080/api/docs</span> the OpenAPI browser</li>
+    <li><span class="inline">/</span> the public gallery</li>
+    <li><span class="inline">/admin/</span> the organizer console, login <span class="inline">organizer</span> / <span class="inline">organizer</span></li>
+    <li><span class="inline">/api/docs</span> the OpenAPI browser</li>
   </ul>
-  <div class="note" style="margin-top:16px">If port 8080 is taken, run <span class="inline">DOGFOOD_PORT=9000 docker compose up</span>. Then prove the published result yourself with verify.py, just below.</div>
+  <div class="note" style="margin-top:14px">If port 8080 is taken locally, run <span class="inline">DOGFOOD_PORT=9000 docker compose up</span>. Then prove the published result yourself with verify.py, just below.</div>
 </section>
 <section class="wrap" id="api">
   <span class="eyebrow">API</span>
