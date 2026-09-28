@@ -1,0 +1,12 @@
+{
+  "name": "DOGFOOD portal",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "DOGFOOD portal", "onAutoForward": "openBrowser" }
+  },
+  "postAttachCommand": "echo 'Run:  docker compose up   then open the forwarded port 8080 when it appears.'"
+}
