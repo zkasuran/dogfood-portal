@@ -1,8 +1,0 @@
-0:00 Intro
-0:25 Boot: one container, offline
-0:40 Step 1: Create
-1:41 Step 2: Submit
-2:30 Step 3: Judge
-3:23 Step 4: Publish
-4:00 Step 5: Verify
-4:32 Recap
