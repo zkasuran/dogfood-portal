@@ -20,6 +20,16 @@ A walkthrough of one full lifecycle (create, submit, judge, publish), ending wit
 verifier passing on the real signed bundle then rejecting a tampered one:
 https://youtu.be/igjISVTL2ik
 
+A five minute recording of that lifecycle is committed as
+[`demo/dogfood-demo.mp4`](demo/dogfood-demo.mp4). It is recorded, not edited:
+`demo/record_demo.py` boots a fresh seeded portal, drives the real UI in a headless
+browser, runs every terminal command it shows, then encodes the MP4. To regenerate:
+
+```bash
+pip install -r requirements.txt playwright imageio-ffmpeg && playwright install chromium
+python3 demo/record_demo.py
+```
+
 ## Run it
 
 One command brings up a seeded, working portal with the network off:

@@ -16,3 +16,5 @@ staticfiles/
 # local scratch
 *.log
 .DS_Store
+
+.demo-work/
