@@ -20,14 +20,21 @@ A walkthrough of one full lifecycle (create, submit, judge, publish), ending wit
 verifier passing on the real signed bundle then rejecting a tampered one:
 https://youtu.be/igjISVTL2ik
 
-A five minute recording of that lifecycle is committed as
-[`demo/dogfood-demo.mp4`](demo/dogfood-demo.mp4). It is recorded, not edited:
-`demo/record_demo.py` boots a fresh seeded portal, drives the real UI in a headless
-browser, runs every terminal command it shows, then encodes the MP4. To regenerate:
+The video is produced by `demo/record_demo.py` from a real session: it boots a fresh
+seeded portal, drives the real UI in headless Chromium (3200x1800 screencast) and runs
+every terminal command it shows. `demo/postprod.py` then composites it at 4K 60 fps
+(window on a wallpaper, rendered cursor with click ripples, spring zoom and pan), adds
+narration from a local Kokoro TTS voice (`demo/voice.py`) over original synthesized
+music (`demo/music.py`, no third-party audio), and normalizes to -14 LUFS.
+Subtitles and YouTube chapters sit beside it: `demo/dogfood-demo.srt`,
+`demo/dogfood-demo.chapters.txt`. The 4K MP4 (about 400 MB) is not committed.
 
 ```bash
-pip install -r requirements.txt playwright imageio-ffmpeg && playwright install chromium
-python3 demo/record_demo.py
+pip install -r requirements.txt playwright imageio-ffmpeg kokoro-onnx soundfile numpy pillow
+playwright install chromium
+# Kokoro model files into .demo-work/kokoro (see demo/voice.py); optional Inter and
+# JetBrains Mono TTFs into .demo-work/fonts
+python3 demo/record_demo.py --out dogfood-demo.mp4     # add --height 1440 for a faster render
 ```
 
 ## Run it
