@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOGFOOD portal, results you can recompute and verify</title>
+<meta name="description" content="A self-hostable hackathon judging portal that publishes an Ed25519-signed results bundle. Recompute the winner from the raw scores and check the signature in your browser.">
+<script>(function(){try{var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="favicon.svg">
+</head>
+<body>
+<header class="top">
+  <div class="wrap nav">
+    <a class="brand" href="#top"><span class="dot">D</span> DOGFOOD portal</a>
+    <ul class="menu" id="menu">
+      <li data-cat><button aria-haspopup="true" aria-expanded="false">Product <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <ul class="sub" role="menu">
+          <li><a href="#top">Overview<small>What the portal does</small></a></li>
+          <li><a href="#how">How judging works<small>Weighting, bias removal, shrinkage</small></a></li>
+        </ul></li>
+      <li data-cat><button aria-haspopup="true" aria-expanded="false">Verify <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <ul class="sub" role="menu">
+          <li><a href="#verify">Verify it yourself<small>Live in your browser, no install</small></a></li>
+          <li><a href="#bundle">The signed bundle<small>What it holds, recompute the winner</small></a></li>
+          <li><a href="#cli">Run verify.py<small>The standalone checker</small></a></li>
+        </ul></li>
+      <li data-cat><button aria-haspopup="true" aria-expanded="false">Explore <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <ul class="sub" role="menu">
+          <li><a href="#gallery">Gallery<small>The public project list</small></a></li>
+          <li><a href="#judging">Judge view<small>A judge sees only their own scores</small></a></li>
+          <li><a href="#results">Results<small>The ranking with uncertainty bands</small></a></li>
+        </ul></li>
+      <li data-cat><button aria-haspopup="true" aria-expanded="false">Developers <svg viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <ul class="sub" role="menu">
+          <li><a href="#run">Run it<small>One command, offline</small></a></li>
+          <li><a href="#api">API<small>The main routes and who may call them</small></a></li>
+          <li><a href="#source">Source and video<small>Repo, demo, writeup</small></a></li>
+        </ul></li>
+    </ul>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle light and dark">◐</button>
+    <button class="icon-btn hamburger" id="burger" aria-label="Menu" aria-expanded="false">☰</button>
+  </div>
+</header>
+<main id="top">
+<section class="wrap hero">
+  <div>
+    <span class="eyebrow">Reproducible signed results</span>
+    <h1>Hackathon results you can recompute and verify yourself.</h1>
+    <p class="lead">DOGFOOD portal is a self-hostable submission and judging platform. When an organizer publishes, it emits an Ed25519-signed bundle carrying the raw scores, the method and the ranking. Anyone recomputes the winner from the raw scores then checks the signature. No trust in the host is required.</p>
+    <div class="cta">
+      <a class="btn primary" href="#verify">Verify the results</a>
+      <a class="btn ghost" href="#run">Run it in one command</a>
+    </div>
+    <div class="stat-band">
+      <div class="s"><b>126</b><span>reviews</span></div>
+      <div class="s"><b>30</b><span>judges</span></div>
+      <div class="s"><b>40</b><span>projects</span></div>
+      <div class="s"><b id="stat-k">0.81</b><span>shrinkage k</span></div>
+    </div>
+  </div>
+  <div class="verifier" id="verify">
+    <div class="vhead"><span class="t">Signed results bundle</span>
+      <span class="badge idle" id="vbadge"><span class="pip"></span><span id="vbadge-t">checking</span></span></div>
+    <div class="vbody">
+      <dl class="kv">
+        <dt>Winner</dt><dd id="v-winner">&mdash;</dd>
+        <dt>Method</dt><dd id="v-method">&mdash;</dd>
+        <dt>Digest</dt><dd id="v-digest">&mdash;</dd>
+        <dt>Public key</dt><dd id="v-pub">&mdash;</dd>
+        <dt>Signature</dt><dd id="v-sig">&mdash;</dd>
+      </dl>
+      <div class="checks">
+        <div class="check idle" id="chk-digest"><span class="m">.</span><span>sha256 digest over the canonical payload matches the bundle</span></div>
+        <div class="check idle" id="chk-sig"><span class="m">.</span><span>Ed25519 signature is valid under the bundle's public key</span></div>
+      </div>
+      <div class="tamper">
+        <div class="row"><span class="pill">Tamper</span><span id="tamper-desc" class="band"></span></div>
+        <div class="row"><div class="seg" id="score-seg"></div>
+          <button class="btn ghost" id="btn-rankswap" style="padding:8px 12px">Swap top 2</button>
+          <button class="btn ghost" id="btn-reset" style="padding:8px 12px">Reset</button></div>
+        <div class="row band">Any change breaks the digest and the signature. This all runs in your browser.</div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="wrap" id="how">
+  <span class="eyebrow">How judging works</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">Fair when judges differ and coverage is uneven</h2>
+  <p class="lead">Reviews become a ranking that holds up when judges run generous or strict and when some projects get more reviews than others.</p>
+  <div class="grid g3" style="margin-top:22px">
+    <div class="card"><span class="tag">1 · Weighted composite</span><h3>Weight the criteria first</h3><p>Each review is a weighted mean of the rubric criteria, kept on the 1 to 5 scale. Functionality 0.4, quality 0.4, innovation 0.2.</p></div>
+    <div class="card"><span class="tag">2 · Remove judge bias</span><h3>Measure quality, not leniency</h3><p>An additive model fits each judge's bias then subtracts it, so a project is scored on its own merit. A judge who scores everyone the same adds an offset and no ranking signal.</p></div>
+    <div class="card"><span class="tag">3 · Shrink by coverage</span><h3>Coverage buys confidence, not rank</h3><p>Each project's quality is pulled toward the mean by n/(n+k) with <b>k&nbsp;=&nbsp;0.81</b>, so a noisy 2-review score cannot outrank a solid 5-review one.</p></div>
+  </div>
+  <div class="note" style="margin-top:16px">Every score ships with an uncertainty band and its review count. Projects whose bands overlap are a statistical tie and go to a tie-break, not a decision on the third decimal. A guarded per-judge z-score runs as a cross-check. The full method with its references is in JUDGING.md.</div>
+</section>
+<section class="wrap" id="bundle">
+  <span class="eyebrow">The signed bundle</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">Everything needed to recompute, in one signed file</h2>
+  <p class="lead">The bundle carries the raw scores, the rubric weights, the method with its parameters, the code commit and the ranking. It is hashed with sha256 over a canonical encoding then signed with Ed25519. The public key travels inside, so no key of ours is needed to check it.</p>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <h3>Recompute the winner in your browser</h3>
+      <p style="margin:6px 0 12px">This reruns the additive model on the <b id="rc-n">126</b> raw scores from the bundle, with no network, then checks the winner it produces against the published rank 1.</p>
+      <button class="btn primary" id="btn-recompute">Recompute from raw scores</button>
+      <div id="rc-out" style="margin-top:14px"></div>
+    </div>
+    <div class="card">
+      <h3>What the bundle holds</h3>
+      <ul id="bundle-fields" style="margin:8px 0 14px;padding-left:18px;color:var(--muted);font-size:14px"></ul>
+      <button class="btn ghost" id="btn-download">Download bundle.json</button>
+    </div>
+  </div>
+</section>
+<section class="wrap" id="cli">
+  <span class="eyebrow">Run verify.py</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">The standalone checker, no portal needed</h2>
+  <p class="lead">Save the published bundle then run the verifier. It recomputes the ranking, checks the digest and verifies the signature. Standard library only, plus cryptography for the signature step.</p>
+  <pre class="code"># save the published bundle
+curl http://localhost:8080/api/results/bundle &gt; bundle.json
+
+# recompute the ranking, check the digest, verify the signature
+python3 verify.py bundle.json
+# -&gt; VERIFIED   winner prj_16 (Salt Kiln)</pre>
+  <div class="note" style="margin-top:14px">Change any score or rank in bundle.json and verify.py prints <b>NOT VERIFIED</b>, the same result as the live check above.</div>
+</section>
+<section class="wrap" id="gallery">
+  <span class="eyebrow">Gallery</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">The public project list</h2>
+  <p class="lead">Every submission, public to visitors. The one duplicate submission is merged to a single canonical project before scoring, so it is neither ranked twice nor split. The winner is marked.</p>
+  <div class="gallery" id="gal-grid" style="margin-top:20px"></div>
+  <div class="band" style="margin-top:10px">Sample fixture data shipped with the program. The summary line is a placeholder in the fixture.</div>
+</section>
+<section class="wrap" id="judging">
+  <span class="eyebrow">Judge view</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">A judge sees only their own scores</h2>
+  <p class="lead">Role isolation is enforced in the backend, not the template. <b id="jv-name">the judge</b> sees the reviews below and nothing from any peer.</p>
+  <div class="grid g2" style="margin-top:20px;align-items:start">
+    <table class="tbl" id="jv-table"></table>
+    <div>
+      <div class="note">A judge asking for a peer's scores by id is refused with 403. That is the check most portals fail, so it lives in the backend behind a DRF permission class.</div>
+      <pre class="code" style="margin-top:12px">curl -H "Authorization: Token judgeb…" \
+  ".../api/judge/scores?judge_id=jdg_07"
+# HTTP 403 Forbidden</pre>
+    </div>
+  </div>
+</section>
+<section class="wrap" id="results">
+  <span class="eyebrow">Results</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">The ranking, with an uncertainty band per project</h2>
+  <p class="lead">Final score is mu plus the shrunken, bias-adjusted quality. The band and the review count show which ranks are solid and which lean on only a few reviews.</p>
+  <table class="tbl" id="res-table" style="margin-top:18px"></table>
+  <div class="band" style="margin-top:10px">Hidden from non-organizers until publish, then public. This is the exact ranking inside the signed bundle above.</div>
+</section>
+<section class="wrap" id="run">
+  <span class="eyebrow">Run it</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">One command to a seeded, offline portal</h2>
+  <p class="lead">No cloud account, no hosted database, no external API. docker compose up builds one image, migrates, loads the fixture, generates a signing key on first boot then serves on localhost.</p>
+  <pre class="code">docker compose up
+# gallery      http://localhost:8080
+# organizer    http://localhost:8080/admin/   (organizer / organizer)
+# OpenAPI      http://localhost:8080/api/docs</pre>
+  <div class="note" style="margin-top:14px">The acceptance checker is standard library Python: <span class="mono">python3 spec/run.py .dogfood.toml</span> makes seven HTTP requests as each role. The committed acceptance-report.txt shows 7 of 7 PASS at T1 and T2.</div>
+</section>
+<section class="wrap" id="api">
+  <span class="eyebrow">API</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">The main routes and who may call them</h2>
+  <p class="lead">Documented at /api/docs via OpenAPI. The role is the security boundary, checked before any view code runs.</p>
+  <table class="tbl" style="margin-top:18px">
+    <thead><tr><th>Route</th><th>Method</th><th>Who</th></tr></thead>
+    <tbody>
+      <tr><td>/projects</td><td class="mono">GET</td><td>public gallery</td></tr>
+      <tr><td>/api/projects</td><td class="mono">POST</td><td>participant, refused when the event is closed</td></tr>
+      <tr><td>/api/judge/scores</td><td class="mono">GET</td><td>judge sees own, organizer or admin any</td></tr>
+      <tr><td>/api/judge/scores?judge_id=</td><td class="mono">GET</td><td>own judge, or organizer and admin</td></tr>
+      <tr><td>/api/export/results.csv</td><td class="mono">GET</td><td>organizer and admin only</td></tr>
+      <tr><td>/api/results/publish</td><td class="mono">POST</td><td>organizer and admin</td></tr>
+      <tr><td>/api/results/bundle</td><td class="mono">GET</td><td>public</td></tr>
+      <tr><td>/api/verification-key</td><td class="mono">GET</td><td>public</td></tr>
+    </tbody>
+  </table>
+</section>
+<section class="wrap" id="source">
+  <span class="eyebrow">Source and video</span>
+  <h2 style="font-size:28px;margin:10px 0 8px">Everything is public and checkable</h2>
+  <div class="grid g3" style="margin-top:20px">
+    <a class="card" href="https://github.com/zkasuran/dogfood-portal" target="_blank" rel="noopener"><h3>Repository</h3><p>Django, DRF and SQLite. One container, offline. MIT licensed.</p></a>
+    <a class="card" href="https://youtu.be/pg0ozBi13Z4" target="_blank" rel="noopener"><h3>Demo video</h3><p>A walkthrough of one full lifecycle, create to verify.</p></a>
+    <a class="card" href="https://dev.to/zkasuran/signed-hackathon-results-anyone-can-recompute-and-verify-4f59" target="_blank" rel="noopener"><h3>Writeup</h3><p>How the signed results work and why they hold.</p></a>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">Built for DOGFOOD 2026. MIT licensed. This page runs entirely in your browser against a real Ed25519-signed bundle produced by the portal at commit <span class="mono" id="foot-commit">&mdash;</span>. The portal's own deliverable stays offline behind <span class="mono">docker compose up</span>.</div></footer>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
