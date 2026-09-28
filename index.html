@@ -117,14 +117,16 @@
 <section class="wrap" id="cli">
   <span class="eyebrow">Run verify.py</span>
   <h2 style="font-size:28px;margin:10px 0 8px">The standalone checker, no portal needed</h2>
-  <p class="lead">Save the published bundle then run the verifier. It recomputes the ranking, checks the digest and verifies the signature. Standard library only, plus cryptography for the signature step.</p>
-  <pre class="code"># save the published bundle
+  <p class="lead">Save the published bundle then run the verifier. It recomputes the ranking, checks the digest then verifies the signature. Standard library only, plus cryptography for the signature step.</p>
+  <div class="cmd"><code># publish the results, then save the signed bundle
+curl -X POST -H "Authorization: Token organizer0000000000000000000000000000000" \
+  http://localhost:8080/api/results/publish
 curl http://localhost:8080/api/results/bundle &gt; bundle.json
 
 # recompute the ranking, check the digest, verify the signature
 python3 verify.py bundle.json
-# -&gt; VERIFIED   winner prj_16 (Salt Kiln)</pre>
-  <div class="note" style="margin-top:14px">Change any score or rank in bundle.json and verify.py prints <b>NOT VERIFIED</b>, the same result as the live check above.</div>
+# -&gt; VERIFIED   winner prj_16 (Salt Kiln)</code><button data-copy>Copy</button></div>
+  <div class="note" style="margin-top:14px">Change any score or rank in bundle.json and verify.py prints <b>NOT VERIFIED</b>, the same result as the live check at the top of this page.</div>
 </section>
 <section class="wrap" id="gallery">
   <span class="eyebrow">Gallery</span>
@@ -156,13 +158,22 @@ python3 verify.py bundle.json
 </section>
 <section class="wrap" id="run">
   <span class="eyebrow">Run it</span>
-  <h2 style="font-size:28px;margin:10px 0 8px">One command to a seeded, offline portal</h2>
-  <p class="lead">No cloud account, no hosted database, no external API. docker compose up builds one image, migrates, loads the fixture, generates a signing key on first boot then serves on localhost.</p>
-  <pre class="code">docker compose up
-# gallery      http://localhost:8080
-# organizer    http://localhost:8080/admin/   (organizer / organizer)
-# OpenAPI      http://localhost:8080/api/docs</pre>
-  <div class="note" style="margin-top:14px">The acceptance checker is standard library Python: <span class="mono">python3 spec/run.py .dogfood.toml</span> makes seven HTTP requests as each role. The committed acceptance-report.txt shows 7 of 7 PASS at T1 and T2.</div>
+  <h2 style="font-size:28px;margin:10px 0 8px">Run the real portal in one command</h2>
+  <p class="lead">One command clones the repo then boots a seeded, offline portal on your machine. No cloud account, no config, no external API. You need Docker and git installed.</p>
+  <div class="cmd"><code>git clone https://github.com/zkasuran/dogfood-portal &amp;&amp; cd dogfood-portal &amp;&amp; docker compose up</code><button data-copy>Copy</button></div>
+  <ol class="steps-timed">
+    <li><span class="tm">0:00</span><span>Paste the command and press enter. Docker builds one image the first time you run it.</span></li>
+    <li><span class="tm">~1 to 2 min</span><span><b>First build only.</b> Build layers stream past while it installs Python and Django. This is the slow step and it is normal, so wait for it. Every later run skips the build and starts in seconds.</span></li>
+    <li><span class="tm">~5 sec</span><span>The container prints <code>migrating database</code>, then <code>seeding fixtures</code>, then the four role login tokens.</span></li>
+    <li><span class="tm">ready</span><span>When you see <code>starting gunicorn on 0.0.0.0:8080</code>, open <a href="http://localhost:8080" target="_blank" rel="noopener">http://localhost:8080</a>.</span></li>
+  </ol>
+  <p class="lead" style="margin-top:20px">What to open once it is up:</p>
+  <ul class="open-list">
+    <li><span class="inline">http://localhost:8080</span> the public gallery</li>
+    <li><span class="inline">http://localhost:8080/admin/</span> the organizer console, login <span class="inline">organizer</span> / <span class="inline">organizer</span></li>
+    <li><span class="inline">http://localhost:8080/api/docs</span> the OpenAPI browser</li>
+  </ul>
+  <div class="note" style="margin-top:16px">If port 8080 is taken, run <span class="inline">DOGFOOD_PORT=9000 docker compose up</span>. Then prove the published result yourself with verify.py, just below.</div>
 </section>
 <section class="wrap" id="api">
   <span class="eyebrow">API</span>

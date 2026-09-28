@@ -131,4 +131,16 @@ $('#jv-table').innerHTML=jh+'</tbody>';
 let rh='<thead><tr><th class="num">#</th><th>Project</th><th>Team</th><th class="num">Final</th><th class="num">n</th><th class="num">Band</th></tr></thead><tbody>';
 D.ranking.forEach(r=>{const g=D.gallery.find(x=>x.id===r.project)||{};rh+='<tr class="'+(r.rank===1?'win':'')+'"><td class="num">'+r.rank+'</td><td>'+esc(r.title)+'</td><td>'+esc(g.team||'')+'</td><td class="num">'+r.final.toFixed(3)+'</td><td class="num">'+r.n+'</td><td class="num">±'+r.uncertainty.toFixed(3)+'</td></tr>';});
 $('#res-table').innerHTML=rh+'</tbody>';
+// ---- copy buttons on command bars
+function fallbackCopy(text){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
+document.querySelectorAll('.cmd button[data-copy]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const text=btn.parentElement.querySelector('code').innerText;
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(()=>fallbackCopy(text));}
+    else{fallbackCopy(text);}
+    const label=btn.dataset.label||(btn.dataset.label=btn.textContent);
+    btn.classList.add('copied');btn.textContent='Copied';
+    setTimeout(()=>{btn.classList.remove('copied');btn.textContent=label;},1200);
+  });
+});
 })();
